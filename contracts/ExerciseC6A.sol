@@ -15,7 +15,10 @@ contract ExerciseC6A {
     address private contractOwner;                  // Account used to deploy contract
     mapping(address => UserProfile) userProfiles;   // Mapping for storing user profiles
 
+    bool public isOperational;
 
+    uint constant M = 2;
+    address[] multiCalls = new address[](0);
 
     /********************************************************************************************/
     /*                                       EVENT DEFINITIONS                                  */
@@ -33,6 +36,7 @@ contract ExerciseC6A {
                                 public 
     {
         contractOwner = msg.sender;
+        isOperational = true;
     }
 
     /********************************************************************************************/
@@ -50,6 +54,15 @@ contract ExerciseC6A {
         require(msg.sender == contractOwner, "Caller is not contract owner");
         _;
     }
+
+    /**
+    * @dev Modifier that requires the contract to be operationnal
+    */
+    modifier requireContractOperational()
+    {
+        require(isOperational, "Contract is not operational");
+        _;
+    }    
 
     /********************************************************************************************/
     /*                                       UTILITY FUNCTIONS                                  */
@@ -83,6 +96,7 @@ contract ExerciseC6A {
                                 )
                                 external
                                 requireContractOwner
+                                requireContractOperational
     {
         require(!userProfiles[account].isRegistered, "User is already registered.");
 
@@ -90,6 +104,31 @@ contract ExerciseC6A {
                                                 isRegistered: true,
                                                 isAdmin: isAdmin
                                             });
+    }
+
+    function setOperatingStatus
+                            (
+                                bool mode
+                            ) 
+                            external
+    {
+        require(mode != isOperational, "New mode must be different from existing mode");
+        require(userProfiles[msg.sender].isAdmin, "Caller is not an admin");
+
+        bool isDuplicate = false;
+        for(uint c=0; c<multiCalls.length; c++) {
+            if (multiCalls[c] == msg.sender) {
+                isDuplicate = true;
+                break;
+            }
+        }
+        require(!isDuplicate, "Caller has already called this function.");
+
+        multiCalls.push(msg.sender);
+        if (multiCalls.length >= M) {
+            isOperational = mode;      
+            multiCalls = new address[](0);      
+        }
     }
 }
 
